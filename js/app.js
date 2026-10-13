@@ -6,6 +6,11 @@ let cart = [];              // items: { id, name, price, qty }
 let lastTransaction = null; // filled after a successful payment
 let txnCounter = 0;         // increments for every completed transaction
 let lastChange = null;      // { id, type: "new" | "qty" } — tells renderCart which row to animate
+let isProcessing = false;   // true while the payment window is open (blocks double submit)
+
+// How long each phase of the payment window stays on screen (milliseconds).
+const PROCESSING_MS = 1500;
+const CONFIRM_MS = 1500;
 
 // ===== Helpers =====
 // Work in centavos to avoid floating-point errors (e.g. 0.1 + 0.2).
@@ -132,6 +137,8 @@ function goToPayment() {
 }
 
 function confirmPayment() {
+  if (isProcessing) return; // ignore extra clicks / Enter while processing
+
   const total = getTotal();
   const result = validatePayment($("cash-input").value, total);
 
@@ -154,9 +161,40 @@ function confirmPayment() {
     status: "PAID"
   };
 
-  renderReceipt(lastTransaction);
-  showStage(3);
-  toast("Payment successful");
+  showProcessing(lastTransaction);
+}
+
+// Payment window: "Processing…" → "Payment Confirmed" summary → receipt.
+function showProcessing(t) {
+  isProcessing = true;
+
+  // Phase 1: processing
+  $("proc-amounts").textContent = `Cash ${peso(t.paid)} · Total ${peso(t.total)}`;
+  $("proc-loading").hidden = false;
+  $("proc-done").hidden = true;
+  $("processing").hidden = false;
+
+  setTimeout(() => {
+    // Phase 2: confirmed, with transaction details
+    $("proc-summary").innerHTML = `
+      <dt>Reference No.</dt><dd>${t.ref}</dd>
+      <dt>Total Amount</dt><dd>${peso(t.total)}</dd>
+      <dt>Cash Received</dt><dd>${peso(t.paid)}</dd>
+      <dt>Change</dt><dd class="proc-change">${peso(t.change)}</dd>
+    `;
+    $("proc-loading").hidden = true;
+    $("proc-done").hidden = false;
+    $("proc-bar").style.animationDuration = CONFIRM_MS + "ms";
+
+    setTimeout(() => {
+      // Done: show the receipt
+      $("processing").hidden = true;
+      renderReceipt(t);
+      showStage(3);
+      toast("Payment successful");
+      isProcessing = false;
+    }, CONFIRM_MS);
+  }, PROCESSING_MS);
 }
 
 function startNewTransaction() {

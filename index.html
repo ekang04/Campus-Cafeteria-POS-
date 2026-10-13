@@ -134,6 +134,25 @@
     </section>
   </main>
 
+  <!-- Payment processing / confirmation window -->
+  <div id="processing" class="overlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-live="assertive">
+      <div id="proc-loading">
+        <div class="spinner"></div>
+        <h3>Processing payment…</h3>
+        <p id="proc-amounts" class="muted"></p>
+      </div>
+
+      <div id="proc-done" hidden>
+        <span class="success-icon modal-check">✓</span>
+        <h3>Payment Confirmed</h3>
+        <dl id="proc-summary" class="proc-summary"></dl>
+        <p class="muted">Preparing receipt…</p>
+        <div class="progress"><div id="proc-bar" class="progress-bar"></div></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast notifications -->
   <div id="toast-area" class="toast-area" aria-live="polite"></div>
 
