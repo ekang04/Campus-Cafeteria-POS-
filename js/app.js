@@ -219,7 +219,11 @@ function makeReference(date, counter) {
 function renderProducts() {
   $("product-grid").innerHTML = PRODUCTS.map((p, index) => `
     <div class="product" style="--i:${index}">
-      <div class="product-icon">${p.icon}</div>
+      <div class="product-thumb">
+        ${p.image
+          ? `<img src="${p.image}" alt="${p.name}" class="${p.fit === "contain" ? "fit-contain" : ""}">`
+          : `<span class="product-icon">${p.icon}</span>`}
+      </div>
       <span class="product-cat">${p.category}</span>
       <span class="product-name">${p.name}</span>
       <span class="product-price">${peso(p.price)}</span>

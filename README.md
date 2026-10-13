@@ -60,6 +60,7 @@ No installation or server is needed.
 ├── js/products.js      Hard-coded product list
 ├── js/app.js           Cart, computation, validation, receipt logic
 ├── assets/favicon.svg  App icon
+├── assets/images/      Product photos
 ├── docs/ai-usage.md    AI-assisted development documentation
 └── README.md
 ```
