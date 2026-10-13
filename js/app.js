@@ -2,7 +2,9 @@
 // All data is kept in memory (no database, no API).
 
 // ===== State =====
-let cart = []; // items: { id, name, price, qty }
+let cart = [];              // items: { id, name, price, qty }
+let lastTransaction = null; // filled after a successful payment
+let txnCounter = 0;         // increments for every completed transaction
 
 // ===== Helpers =====
 // Work in centavos to avoid floating-point errors (e.g. 0.1 + 0.2).
@@ -77,6 +79,93 @@ function getItemCount() {
   return cart.reduce((sum, i) => sum + i.qty, 0);
 }
 
+// ===== Payment validation =====
+// Returns { ok: true, amount } or { ok: false, message }.
+function validatePayment(raw, total) {
+  const value = raw.trim();
+  const invalid = { ok: false, message: "Please enter a valid payment amount." };
+
+  if (value === "") return invalid;                          // blank
+  if (value.startsWith("-")) return invalid;                 // negative
+  if (!/^\d+(\.\d{1,2})?$/.test(value)) return invalid;      // non-numeric / bad format
+
+  const amount = parseFloat(value);
+  if (amount <= 0) return invalid;                           // zero
+
+  if (toCents(amount) < toCents(total)) {
+    return { ok: false, message: `Insufficient payment. Please enter at least ${peso(total)}.` };
+  }
+  return { ok: true, amount };
+}
+
+// ===== Stage navigation =====
+function showStage(step) {
+  $("stage-order").hidden = step !== 1;
+  $("stage-payment").hidden = step !== 2;
+  $("stage-receipt").hidden = step !== 3;
+
+  document.querySelectorAll("#stepper .step").forEach((el) => {
+    const n = Number(el.dataset.step);
+    el.classList.toggle("active", n === step);
+    el.classList.toggle("done", n < step);
+  });
+  window.scrollTo(0, 0);
+}
+
+function goToPayment() {
+  if (cart.length === 0) return;
+  renderSummary();
+  resetPaymentForm();
+  showStage(2);
+  $("cash-input").focus();
+}
+
+function confirmPayment() {
+  const total = getTotal();
+  const result = validatePayment($("cash-input").value, total);
+
+  if (!result.ok) {
+    showPaymentError(result.message);
+    toast(result.message, "error");
+    $("cash-input").focus();
+    return;
+  }
+
+  txnCounter++;
+  const now = new Date();
+  lastTransaction = {
+    ref: makeReference(now, txnCounter),
+    date: now,
+    items: cart.map((i) => ({ ...i })),
+    total,
+    paid: result.amount,
+    change: computeChange(result.amount, total),
+    status: "PAID"
+  };
+
+  renderReceipt(lastTransaction);
+  showStage(3);
+  toast("Payment successful");
+}
+
+function startNewTransaction() {
+  cart = [];
+  lastTransaction = null;
+  resetPaymentForm();
+  $("receipt").innerHTML = "";
+  renderCart();
+  showStage(1);
+  toast("Ready for a new transaction");
+}
+
+// Reference format: TXN-YYYYMMDD-0001
+function makeReference(date, counter) {
+  const ymd = date.getFullYear() +
+    String(date.getMonth() + 1).padStart(2, "0") +
+    String(date.getDate()).padStart(2, "0");
+  return `TXN-${ymd}-${String(counter).padStart(4, "0")}`;
+}
+
 // ===== Rendering =====
 function renderProducts() {
   $("product-grid").innerHTML = PRODUCTS.map((p) => `
@@ -119,6 +208,78 @@ function renderCart() {
   $("btn-proceed").disabled = cart.length === 0;
 }
 
+function itemRows(items) {
+  return items.map((i) => `
+    <tr>
+      <td>${i.name}</td>
+      <td class="num">${i.qty}</td>
+      <td class="num">${peso(i.price)}</td>
+      <td class="num">${peso(getSubtotal(i))}</td>
+    </tr>
+  `).join("");
+}
+
+function renderSummary() {
+  $("summary-body").innerHTML = itemRows(cart);
+  $("pay-total").textContent = peso(getTotal());
+}
+
+function resetPaymentForm() {
+  $("cash-input").value = "";
+  $("change-preview").textContent = peso(0);
+  clearPaymentError();
+}
+
+function showPaymentError(message) {
+  $("pay-error").textContent = message;
+  $("cash-input").parentElement.classList.add("invalid");
+}
+
+function clearPaymentError() {
+  $("pay-error").textContent = "";
+  $("cash-input").parentElement.classList.remove("invalid");
+}
+
+// Live change preview while the cashier types.
+function updateChangePreview() {
+  clearPaymentError();
+  const result = validatePayment($("cash-input").value, getTotal());
+  $("change-preview").textContent = result.ok ? peso(computeChange(result.amount, getTotal())) : peso(0);
+}
+
+function renderReceipt(t) {
+  const dateText = t.date.toLocaleString("en-PH", {
+    year: "numeric", month: "long", day: "numeric",
+    hour: "2-digit", minute: "2-digit", second: "2-digit"
+  });
+
+  $("receipt").innerHTML = `
+    <div class="receipt-head">
+      <h3>Campus Cafeteria</h3>
+      <p>Davao del Norte State College</p>
+      <p>Official Digital Receipt</p>
+    </div>
+    <dl class="receipt-meta">
+      <dt>Reference No.</dt><dd>${t.ref}</dd>
+      <dt>Date &amp; Time</dt><dd>${dateText}</dd>
+      <dt>Payment Method</dt><dd>Cash</dd>
+      <dt>Status</dt><dd><span class="status-paid">${t.status}</span></dd>
+    </dl>
+    <table class="table">
+      <thead>
+        <tr><th>Item</th><th class="num">Qty</th><th class="num">Price</th><th class="num">Subtotal</th></tr>
+      </thead>
+      <tbody>${itemRows(t.items)}</tbody>
+    </table>
+    <div class="receipt-totals">
+      <div class="grand"><span>Total Amount</span><span>${peso(t.total)}</span></div>
+      <div><span>Cash Received</span><span>${peso(t.paid)}</span></div>
+      <div><span>Change</span><strong>${peso(t.change)}</strong></div>
+    </div>
+    <div class="receipt-foot">Thank you for dining with us!</div>
+  `;
+}
+
 // ===== Events =====
 $("product-grid").addEventListener("click", (e) => {
   const btn = e.target.closest("button[data-id]");
@@ -138,6 +299,26 @@ $("btn-clear").addEventListener("click", () => {
   if (cart.length === 0) return;
   clearCart();
   toast("Order cleared");
+});
+
+$("btn-proceed").addEventListener("click", goToPayment);
+$("btn-back").addEventListener("click", () => showStage(1));
+$("btn-confirm").addEventListener("click", confirmPayment);
+$("btn-new").addEventListener("click", startNewTransaction);
+$("btn-print").addEventListener("click", () => window.print());
+
+$("cash-input").addEventListener("input", updateChangePreview);
+$("cash-input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") confirmPayment();
+});
+
+$("quick-cash").addEventListener("click", (e) => {
+  const chip = e.target.closest("button[data-amount]");
+  if (!chip) return;
+  const amount = chip.dataset.amount === "exact" ? getTotal() : Number(chip.dataset.amount);
+  $("cash-input").value = amount.toFixed(2);
+  updateChangePreview();
+  $("cash-input").focus();
 });
 
 // ===== Start =====
