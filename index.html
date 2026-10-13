@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Campus Cafeteria POS</title>
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Header with brand and step indicator -->
+  <header class="topbar">
+    <div class="brand">
+      <img src="assets/favicon.svg" alt="" class="brand-logo">
+      <div>
+        <h1>Campus Cafeteria POS</h1>
+        <p class="brand-sub">DNSC Cafeteria Counter</p>
+      </div>
+    </div>
+
+    <ol class="stepper" id="stepper">
+      <li class="step active" data-step="1"><span class="step-num">1</span> Order</li>
+      <li class="step" data-step="2"><span class="step-num">2</span> Payment</li>
+      <li class="step" data-step="3"><span class="step-num">3</span> Receipt</li>
+    </ol>
+  </header>
+
+  <main class="container">
+    <!-- STEP 1: Product ordering -->
+    <section id="stage-order" class="stage">
+      <div class="order-layout">
+        <div class="card">
+          <div class="card-head">
+            <h2>Menu</h2>
+            <span class="muted">Click a product to add it to the order</span>
+          </div>
+          <div id="product-grid" class="product-grid"></div>
+        </div>
+
+        <aside class="card cart-card">
+          <div class="card-head">
+            <h2>Current Order</h2>
+            <span id="cart-count" class="badge">0 items</span>
+          </div>
+
+          <div id="cart-list" class="cart-list"></div>
+
+          <div class="total-row">
+            <span>Total Amount</span>
+            <strong id="cart-total">₱0.00</strong>
+          </div>
+
+          <div class="btn-row">
+            <button id="btn-clear" class="btn btn-ghost" type="button">Clear</button>
+            <button id="btn-proceed" class="btn btn-primary btn-grow" type="button" disabled>
+              Proceed to Payment →
+            </button>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- STEP 2: Cash payment -->
+    <section id="stage-payment" class="stage" hidden>
+      <div class="payment-layout">
+        <div class="card">
+          <div class="card-head">
+            <h2>Order Summary</h2>
+          </div>
+          <table class="table">
+            <thead>
+              <tr><th>Item</th><th class="num">Qty</th><th class="num">Unit Price</th><th class="num">Subtotal</th></tr>
+            </thead>
+            <tbody id="summary-body"></tbody>
+          </table>
+        </div>
+
+        <div class="card pay-card">
+          <div class="card-head">
+            <h2>Cash Payment</h2>
+          </div>
+
+          <div class="due-box">
+            <span>Total Amount Due</span>
+            <strong id="pay-total">₱0.00</strong>
+          </div>
+
+          <label for="cash-input" class="field-label">Amount Paid (Cash)</label>
+          <div class="cash-field">
+            <span class="cash-prefix">₱</span>
+            <input id="cash-input" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00">
+          </div>
+          <p id="pay-error" class="error-msg" role="alert"></p>
+
+          <div class="quick-cash" id="quick-cash">
+            <button type="button" class="chip" data-amount="exact">Exact</button>
+            <button type="button" class="chip" data-amount="100">₱100</button>
+            <button type="button" class="chip" data-amount="200">₱200</button>
+            <button type="button" class="chip" data-amount="500">₱500</button>
+            <button type="button" class="chip" data-amount="1000">₱1,000</button>
+          </div>
+
+          <div class="change-box">
+            <span>Change</span>
+            <strong id="change-preview">₱0.00</strong>
+          </div>
+
+          <div class="btn-row">
+            <button id="btn-back" class="btn btn-ghost" type="button">← Back to Order</button>
+            <button id="btn-confirm" class="btn btn-primary btn-grow" type="button">Confirm Payment</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 3: Digital receipt -->
+    <section id="stage-receipt" class="stage" hidden>
+      <div class="receipt-wrap">
+        <div class="success-banner">
+          <span class="success-icon">✓</span>
+          <div>
+            <strong>Payment Successful</strong>
+            <p>The transaction has been completed.</p>
+          </div>
+        </div>
+
+        <div class="card receipt" id="receipt"></div>
+
+        <div class="btn-row">
+          <button id="btn-print" class="btn btn-ghost" type="button">Print Receipt</button>
+          <button id="btn-new" class="btn btn-primary btn-grow" type="button">New Transaction</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Toast notifications -->
+  <div id="toast-area" class="toast-area" aria-live="polite"></div>
+
+  <script src="js/products.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
