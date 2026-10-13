@@ -221,7 +221,9 @@ function renderProducts() {
     <div class="product" style="--i:${index}">
       <div class="product-thumb">
         ${p.image
-          ? `<img src="${p.image}" alt="${p.name}">`
+          ? `<img src="${p.image}" alt="${p.name}"
+                  class="${p.fit === "contain" ? "fit-contain" : ""}"
+                  style="object-position: ${p.focus || "center"}">`
           : `<span class="product-icon">${p.icon}</span>`}
       </div>
       <span class="product-cat">${p.category}</span>
