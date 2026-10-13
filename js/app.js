@@ -5,6 +5,7 @@
 let cart = [];              // items: { id, name, price, qty }
 let lastTransaction = null; // filled after a successful payment
 let txnCounter = 0;         // increments for every completed transaction
+let lastChange = null;      // { id, type: "new" | "qty" } — tells renderCart which row to animate
 
 // ===== Helpers =====
 // Work in centavos to avoid floating-point errors (e.g. 0.1 + 0.2).
@@ -16,6 +17,13 @@ function peso(amount) {
 }
 
 const $ = (id) => document.getElementById(id);
+
+// Restart a CSS animation class (remove it, force a reflow, add it back).
+function replay(el, cls) {
+  el.classList.remove(cls);
+  void el.offsetWidth;
+  el.classList.add(cls);
+}
 
 function toast(message, type = "success") {
   const el = document.createElement("div");
@@ -32,8 +40,10 @@ function addToCart(id) {
   const item = cart.find((i) => i.id === id);
   if (item) {
     item.qty++;
+    lastChange = { id, type: "qty" };
   } else {
     cart.push({ id: product.id, name: product.name, price: product.price, qty: 1 });
+    lastChange = { id, type: "new" };
   }
   renderCart();
   toast(`Added ${product.name} to order`);
@@ -47,6 +57,7 @@ function changeQty(id, delta) {
     removeItem(id);
     return;
   }
+  lastChange = { id, type: "qty" };
   renderCart();
 }
 
@@ -168,8 +179,8 @@ function makeReference(date, counter) {
 
 // ===== Rendering =====
 function renderProducts() {
-  $("product-grid").innerHTML = PRODUCTS.map((p) => `
-    <div class="product">
+  $("product-grid").innerHTML = PRODUCTS.map((p, index) => `
+    <div class="product" style="--i:${index}">
       <div class="product-icon">${p.icon}</div>
       <span class="product-cat">${p.category}</span>
       <span class="product-name">${p.name}</span>
@@ -186,7 +197,7 @@ function renderCart() {
     list.innerHTML = `<div class="cart-empty">No items yet.<br>Add products from the menu.</div>`;
   } else {
     list.innerHTML = cart.map((i) => `
-      <div class="cart-item">
+      <div class="cart-item ${animClass(i.id)}" data-row="${i.id}">
         <div>
           <div class="cart-item-name">${i.name}</div>
           <div class="cart-item-price">${peso(i.price)} each</div>
@@ -202,15 +213,37 @@ function renderCart() {
     `).join("");
   }
 
+  lastChange = null;
+
   const count = getItemCount();
   $("cart-count").textContent = `${count} item${count === 1 ? "" : "s"}`;
-  $("cart-total").textContent = peso(getTotal());
+
+  const totalEl = $("cart-total");
+  const newTotal = peso(getTotal());
+  if (totalEl.textContent !== newTotal) {
+    totalEl.textContent = newTotal;
+    replay(totalEl, "pulse");
+  }
   $("btn-proceed").disabled = cart.length === 0;
 }
 
+// Animation class for a cart row: slide in when new, bump when its quantity changed.
+function animClass(id) {
+  if (!lastChange || lastChange.id !== id) return "";
+  return lastChange.type === "new" ? "is-new" : "bumped";
+}
+
+// Fade the row out first, then remove it from the cart.
+function animateRemove(id) {
+  const row = document.querySelector(`[data-row="${id}"]`);
+  if (!row || row.classList.contains("removing")) return;
+  row.classList.add("removing");
+  setTimeout(() => removeItem(id), 200);
+}
+
 function itemRows(items) {
-  return items.map((i) => `
-    <tr>
+  return items.map((i, index) => `
+    <tr class="row-in" style="--i:${index}">
       <td>${i.name}</td>
       <td class="num">${i.qty}</td>
       <td class="num">${peso(i.price)}</td>
@@ -232,7 +265,9 @@ function resetPaymentForm() {
 
 function showPaymentError(message) {
   $("pay-error").textContent = message;
+  replay($("pay-error"), "fade-in");
   $("cash-input").parentElement.classList.add("invalid");
+  replay($("cash-input").parentElement, "shake");
 }
 
 function clearPaymentError() {
@@ -244,7 +279,12 @@ function clearPaymentError() {
 function updateChangePreview() {
   clearPaymentError();
   const result = validatePayment($("cash-input").value, getTotal());
-  $("change-preview").textContent = result.ok ? peso(computeChange(result.amount, getTotal())) : peso(0);
+  const changeEl = $("change-preview");
+  const newChange = result.ok ? peso(computeChange(result.amount, getTotal())) : peso(0);
+  if (changeEl.textContent !== newChange) {
+    changeEl.textContent = newChange;
+    if (result.ok) replay(changeEl.parentElement, "pulse");
+  }
 }
 
 function renderReceipt(t) {
@@ -290,9 +330,13 @@ $("cart-list").addEventListener("click", (e) => {
   const btn = e.target.closest("button[data-action]");
   if (!btn) return;
   const id = Number(btn.dataset.id);
+  const item = cart.find((i) => i.id === id);
   if (btn.dataset.action === "inc") changeQty(id, 1);
-  if (btn.dataset.action === "dec") changeQty(id, -1);
-  if (btn.dataset.action === "remove") removeItem(id);
+  if (btn.dataset.action === "dec") {
+    if (item && item.qty === 1) animateRemove(id); // last one: fade out, then remove
+    else changeQty(id, -1);
+  }
+  if (btn.dataset.action === "remove") animateRemove(id);
 });
 
 $("btn-clear").addEventListener("click", () => {

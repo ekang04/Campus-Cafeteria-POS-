@@ -268,6 +268,59 @@ h2 { font-size: 1.1rem; }
 .toast.hide { opacity: 0; transform: translateY(6px); transition: opacity .25s, transform .25s; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
+/* ===== Animations ===== */
+@keyframes fade-up   { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes fade-down { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+@keyframes fade-in   { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slide-in  { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
+@keyframes slide-out { to { opacity: 0; transform: translateX(24px); } }
+@keyframes bump      { 50% { transform: scale(1.18); } }
+@keyframes pulse     { 50% { transform: scale(1.06); } }
+@keyframes shake {
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+@keyframes pop {
+  0%   { transform: scale(0); }
+  70%  { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+/* Every page: fade + slide up when it becomes visible (replays each time it is un-hidden) */
+.stage { animation: fade-up .35s ease-out; }
+
+/* Stepper and button feedback */
+.step, .step-num { transition: background .3s, color .3s, border-color .3s; }
+.btn, .chip, .qty-btn { transition: background .15s, transform .1s, border-color .15s; }
+.btn:active:not(:disabled), .chip:active, .qty-btn:active { transform: scale(.96); }
+
+/* Page 1: Order — staggered menu cards, cart row changes, total pulse */
+.product { animation: fade-up .4s ease-out backwards; animation-delay: calc(var(--i) * 60ms); }
+.cart-item.is-new { animation: slide-in .25s ease-out; }
+.cart-item.bumped .qty-val,
+.cart-item.bumped .cart-item-sub { display: inline-block; animation: bump .25s ease-out; }
+.cart-item.removing { animation: slide-out .2s ease-in forwards; pointer-events: none; }
+.cart-empty { animation: fade-in .3s ease-out; }
+#cart-total { display: inline-block; }
+#cart-total.pulse { animation: pulse .25s ease-out; }
+
+/* Page 2: Payment — staggered summary rows, error shake, change pulse */
+.row-in { animation: fade-up .3s ease-out backwards; animation-delay: calc(var(--i) * 50ms); }
+.cash-field.shake { animation: shake .35s ease-in-out; }
+.error-msg.fade-in { animation: fade-in .25s ease-out; }
+.change-box.pulse { animation: pulse .25s ease-out; }
+
+/* Page 3: Receipt — banner drops in, check icon pops, receipt slides up */
+.success-banner { animation: fade-down .35s ease-out; }
+.success-icon { animation: pop .45s ease-out .1s backwards; }
+.receipt { animation: fade-up .4s ease-out .15s backwards; }
+.receipt .row-in { animation-delay: calc(.25s + var(--i) * 60ms); }
+
+/* Respect users who turn off motion in their OS settings */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
 /* ===== Smaller laptop screens ===== */
 @media (max-width: 960px) {
   .order-layout, .payment-layout { grid-template-columns: 1fr; }
