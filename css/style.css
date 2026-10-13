@@ -96,14 +96,22 @@ h2 { font-size: 1.1rem; }
 .product:hover { border-color: var(--green-600); box-shadow: var(--shadow); transform: translateY(-2px); }
 .product-thumb {
   display: grid; place-items: center;
-  height: 130px;
+  height: 150px;
   margin: -16px -16px 12px;            /* stretch to the card edges */
+  padding: 10px;
   border-radius: var(--radius) var(--radius) 0 0;
-  background: var(--green-50);
+  background: var(--white);
+  border-bottom: 1px solid var(--gray-100);
   overflow: hidden;
 }
-.product-thumb img { width: 100%; height: 100%; object-fit: cover; transition: transform .3s; }
-.product-thumb img.fit-contain { object-fit: contain; padding: 8px; background: var(--white); }
+/* "contain" + centered: the whole product is always visible, never cropped */
+.product-thumb img {
+  width: 100%; height: 100%;
+  object-fit: contain;
+  object-position: center;
+  border-radius: 8px;
+  transition: transform .3s;
+}
 .product:hover .product-thumb img { transform: scale(1.05); }
 .product-icon { font-size: 3rem; }
 .product-cat { font-size: .72rem; text-transform: uppercase; letter-spacing: .6px; color: var(--gray-500); }
